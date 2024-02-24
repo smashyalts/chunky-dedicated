@@ -39,5 +39,5 @@ jobs:
           context: ./
           file: ./Dockerfile
           tags: |
-            ghcr.io/funniray/chunky-dedicated/paper:latest
-            ghcr.io/funniray/chunky-dedicated/paper:${{ github.sha }}
+            ghcr.io/smashyalts/chunky-dedicated/paper:latest
+            ghcr.io/smashyalts/chunky-dedicated/paper:${{ github.sha }}
