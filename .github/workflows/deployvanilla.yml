@@ -1,0 +1,43 @@
+name: Build and deploy - Vanilla
+
+on:
+  push:
+    branches:
+      - Vanilla
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+          cache: 'maven'
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Packages
+        run: mvn -f chunky-dedicated/ --update-snapshots --batch-mode package
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: ./
+          file: ./Dockerfile
+          tags: |
+            ghcr.io/smashyalts/chunky-dedicated/vanilla:latest
+            ghcr.io/smashyalts/chunky-dedicated/vanilla:${{ github.sha }}
