@@ -113,7 +113,7 @@ public final class ChunkyDedicated extends JavaPlugin {
                     initResponse.getUploadId(), partETags);
 
             s3.completeMultipartUpload(compRequest);
-            DiscordWebhook webhook = new DiscordWebhook("https://discord.com/api/webhooks/1212037291372052510/lRdNNDk1DAfyNjC-x_dLhmZHRX6LcOLQR2xjVho9GnqgPxJCPKGt8MToHD5hDSJ7N2sb");
+            DiscordWebhook webhook = new DiscordWebhook(getConfig().getString("webhook"));
             webhook.setContent("https://maps.r2.game.smd.gg/"+ "World." + key + ".zip");
             webhook.setAvatarUrl("https://avatars.githubusercontent.com/u/108903815?s=400&u=80787b5c250845ab8ddbc4b9105c841714af3943&v=4");
             webhook.setUsername("Map Notifier");
