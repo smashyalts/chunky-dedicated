@@ -11,6 +11,7 @@ import org.bukkit.World;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.popcraft.chunky.api.ChunkyAPI;
 
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -112,6 +113,17 @@ public final class ChunkyDedicated extends JavaPlugin {
                     initResponse.getUploadId(), partETags);
 
             s3.completeMultipartUpload(compRequest);
+            DiscordWebhook webhook = new DiscordWebhook("https://discord.com/api/webhooks/1212037291372052510/lRdNNDk1DAfyNjC-x_dLhmZHRX6LcOLQR2xjVho9GnqgPxJCPKGt8MToHD5hDSJ7N2sb");
+            webhook.setContent("https://maps.r2.game.smd.gg/"+ "World." + key + ".zip");
+            webhook.setAvatarUrl("https://avatars.githubusercontent.com/u/108903815?s=400&u=80787b5c250845ab8ddbc4b9105c841714af3943&v=4");
+            webhook.setUsername("Map Notifier");
+            webhook.setTts(true);
+            webhook.addEmbed(new DiscordWebhook.EmbedObject()
+                    .setTitle("World Pregen")
+                    .setColor(Color.RED)
+                    .addField("New pregenned world release!", null, true)
+                    .setUrl("https://maps.r2.game.smd.gg/"+ "World." + key + ".zip"));
+            webhook.execute(); //Handle exception
             getLogger().info("File uploaded successfully");
         } catch (Exception e) {
             s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, "World." + key + ".zip", initResponse.getUploadId()));
