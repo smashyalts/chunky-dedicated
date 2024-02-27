@@ -22,16 +22,15 @@ public final class ChunkyDedicated extends JavaPlugin {
     ChunkyAPI chunky;
     String bucketName = getConfig().getString("bucket-name");
 
+
     Random rand = new Random();
     int key = rand.nextInt(10000000);
 
-    AmazonS3 s3 = AmazonS3ClientBuilder.standard()
-            .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("https://" + getConfig().get("cloudflare-account-id") + ".r2.cloudflarestorage.com", "auto"))
-            .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getConfig().get("cloudflare-access-key").toString(), getConfig().get("cloudflare-secret-key").toString())))
-            .build();
+
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
         // Plugin startup logic
         chunky = getServer().getServicesManager().load(ChunkyAPI.class);
         if (chunky == null) {
@@ -44,7 +43,10 @@ public final class ChunkyDedicated extends JavaPlugin {
         Bukkit.getScheduler().runTaskTimer(this, ()->{
             if (isFinished()) {
                 getLogger().info("No tasks were registered, server closing...");
-                getServer().shutdown();
+                Bukkit.getScheduler().runTaskLater(ChunkyDedicated.getPlugin(ChunkyDedicated.class), ()->{
+                    getServer().shutdown();}, 18000L);
+
+
             }
         }, 200L, 200L);
 
@@ -55,20 +57,25 @@ public final class ChunkyDedicated extends JavaPlugin {
                 return;
             }
             getLogger().info("All tasks finished, uploading files to r2 and closing server...");
-            Objects.requireNonNull(Bukkit.getWorld("world")).save();
             try {
                 ZipDirectory.main("world");
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
             multipartUploadWithS3Client("world.zip");
-            getServer().shutdown();
+            Bukkit.getScheduler().runTaskLater(ChunkyDedicated.getPlugin(ChunkyDedicated.class), ()->{
+                getServer().shutdown();}, 18000L);
+
         });
     }
 
     public void multipartUploadWithS3Client(String filePath) {
+        AmazonS3 s3 = AmazonS3ClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("https://" + getConfig().getString("cloudflare-account-id") + ".r2.cloudflarestorage.com" + "/" + getConfig().getString("bucket-name"), "auto"))
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getConfig().getString("cloudflare-access-key"), getConfig().getString("cloudflare-secret-key"))))
+                .build();
 
-        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, String.valueOf(key));
+        InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, "World." + key + ".zip");
         InitiateMultipartUploadResult initResponse = s3.initiateMultipartUpload(initRequest);
 
         File file = new File(filePath);
@@ -86,7 +93,7 @@ public final class ChunkyDedicated extends JavaPlugin {
 
                 UploadPartRequest uploadRequest = new UploadPartRequest()
                         .withBucketName(bucketName)
-                        .withKey(String.valueOf(key))
+                        .withKey("World." + key + ".zip")
                         .withUploadId(initResponse.getUploadId())
                         .withPartNumber(i)
                         .withFileOffset(filePosition)
@@ -101,12 +108,14 @@ public final class ChunkyDedicated extends JavaPlugin {
             }
 
 
-            CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(getConfig().getString("bucket-name"), String.valueOf(key),
+            CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(getConfig().getString("bucket-name"), "World." + key + ".zip",
                     initResponse.getUploadId(), partETags);
 
             s3.completeMultipartUpload(compRequest);
+            getLogger().info("File uploaded successfully");
         } catch (Exception e) {
-            s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, String.valueOf(key), initResponse.getUploadId()));
+            s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, "World." + key + ".zip", initResponse.getUploadId()));
+            getLogger().severe("File upload failed");
         }
     }
 
