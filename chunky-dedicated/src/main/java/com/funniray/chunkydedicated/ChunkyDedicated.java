@@ -118,11 +118,6 @@ public final class ChunkyDedicated extends JavaPlugin {
             webhook.setAvatarUrl("https://avatars.githubusercontent.com/u/108903815?s=400&u=80787b5c250845ab8ddbc4b9105c841714af3943&v=4");
             webhook.setUsername("Map Notifier");
             webhook.setTts(true);
-            webhook.addEmbed(new DiscordWebhook.EmbedObject()
-                    .setTitle("World Pregen")
-                    .setColor(Color.RED)
-                    .addField("New pregenned world release!", null, true)
-                    .setUrl("https://maps.r2.game.smd.gg/"+ "World." + key + ".zip"));
             webhook.execute(); //Handle exception
             getLogger().info("File uploaded successfully");
         } catch (Exception e) {
