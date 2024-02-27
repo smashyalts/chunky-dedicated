@@ -52,9 +52,5 @@ public class ZipDirectory  {
             zipOut.write(bytes, 0, length);
         }
         fis.close();
-        AmazonS3 s3 = AmazonS3ClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("https://" + getConfig().get("cloudflare-account-id") + ".r2.cloudflarestorage.com", "auto"))
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getConfig().get("cloudflare-access-key").toString(), getConfig().get("cloudflare-secret-key").toString())))
-                .build();
     }
 }
