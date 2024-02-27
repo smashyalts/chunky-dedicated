@@ -3,7 +3,7 @@ name: Build and deploy
 on:
   push:
     branches:
-      - main
+      - Vanilla
 
 jobs:
   build:
@@ -39,5 +39,5 @@ jobs:
           context: ./
           file: ./Dockerfile
           tags: |
-            ghcr.io/smashyalts/chunky-dedicated/paper:latest
-            ghcr.io/smashyalts/chunky-dedicated/paper:${{ github.sha }}
+            ghcr.io/smashyalts/chunky-dedicated/vanilla:latest
+            ghcr.io/smashyalts/chunky-dedicated/vanilla:${{ github.sha }}
