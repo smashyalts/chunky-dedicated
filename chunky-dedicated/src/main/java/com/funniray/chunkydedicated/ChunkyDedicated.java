@@ -63,6 +63,16 @@ public final class ChunkyDedicated extends JavaPlugin {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+            DiscordWebhook webhook = new DiscordWebhook(getConfig().getString("webhook"));
+            webhook.setContent("https://maps.r2.game.smd.gg/"+ "World." + key + ".zip");
+            webhook.setAvatarUrl("https://avatars.githubusercontent.com/u/108903815?s=400&u=80787b5c250845ab8ddbc4b9105c841714af3943&v=4");
+            webhook.setUsername("Map Notifier");
+            webhook.setTts(true);
+            try {
+                webhook.execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             multipartUploadWithS3Client("world.zip");
             Bukkit.getScheduler().runTaskLater(ChunkyDedicated.getPlugin(ChunkyDedicated.class), ()->{
                 getServer().shutdown();}, 18000L);
@@ -112,13 +122,7 @@ public final class ChunkyDedicated extends JavaPlugin {
             CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(getConfig().getString("bucket-name"), "World." + key + ".zip",
                     initResponse.getUploadId(), partETags);
 
-            s3.completeMultipartUpload(compRequest);
-            DiscordWebhook webhook = new DiscordWebhook(getConfig().getString("webhook"));
-            webhook.setContent("https://maps.r2.game.smd.gg/"+ "World." + key + ".zip");
-            webhook.setAvatarUrl("https://avatars.githubusercontent.com/u/108903815?s=400&u=80787b5c250845ab8ddbc4b9105c841714af3943&v=4");
-            webhook.setUsername("Map Notifier");
-            webhook.setTts(true);
-            webhook.execute(); //Handle exception
+            s3.completeMultipartUpload(compRequest);//Handle exception
             getLogger().info("File uploaded successfully");
         } catch (Exception e) {
             s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, "World." + key + ".zip", initResponse.getUploadId()));
