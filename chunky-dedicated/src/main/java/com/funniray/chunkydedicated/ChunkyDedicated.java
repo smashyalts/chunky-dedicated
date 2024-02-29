@@ -1,5 +1,6 @@
 package com.funniray.chunkydedicated;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
@@ -80,18 +81,23 @@ public final class ChunkyDedicated extends JavaPlugin {
         });
     }
 
-    public void multipartUploadWithS3Client(String filePath) {
-        AmazonS3 s3 = AmazonS3ClientBuilder.standard()
-                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("https://" + getConfig().getString("cloudflare-account-id") + ".r2.cloudflarestorage.com" + "/" + getConfig().getString("bucket-name"), "auto"))
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getConfig().getString("cloudflare-access-key"), getConfig().getString("cloudflare-secret-key"))))
-                .build();
+        public void multipartUploadWithS3Client(String filePath) {
+            ClientConfiguration clientConfiguration = new ClientConfiguration();
+            clientConfiguration.setSocketTimeout(60000); // 60-second socket timeout
+            clientConfiguration.setConnectionTimeout(60000); // 60-second connection timeout
+
+            AmazonS3 s3 = AmazonS3ClientBuilder.standard()
+                    .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration("https://" + getConfig().getString("cloudflare-account-id") + ".r2.cloudflarestorage.com" + "/" + getConfig().getString("bucket-name"), "auto"))
+                    .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(getConfig().getString("cloudflare-access-key"), getConfig().getString("cloudflare-secret-key"))))
+                    .withClientConfiguration(clientConfiguration) // Pass the client configuration here
+                    .build();
 
         InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, "World." + key + ".zip");
         InitiateMultipartUploadResult initResponse = s3.initiateMultipartUpload(initRequest);
 
         File file = new File(filePath);
         long contentLength = file.length();
-        long partSize = 5 * 1024 * 1024;
+        long partSize = 10 * 1024 * 1024; // Increased part size to 10MB
 
         try {
 
@@ -100,7 +106,6 @@ public final class ChunkyDedicated extends JavaPlugin {
             for (int i = 1; filePosition < contentLength; i++) {
 
                 partSize = Math.min(partSize, (contentLength - filePosition));
-
 
                 UploadPartRequest uploadRequest = new UploadPartRequest()
                         .withBucketName(bucketName)
@@ -111,18 +116,34 @@ public final class ChunkyDedicated extends JavaPlugin {
                         .withFile(file)
                         .withPartSize(partSize);
 
-
-                UploadPartResult uploadResult = s3.uploadPart(uploadRequest);
-                partETags.add(uploadResult.getPartETag());
+                // Retry logic
+                int retryCount = 0;
+                while (true) {
+                    try {
+                        UploadPartResult uploadResult = s3.uploadPart(uploadRequest);
+                        partETags.add(uploadResult.getPartETag());
+                        break;
+                    } catch (Exception e) {
+                        if (++retryCount > 3) { // Maximum of 3 retries
+                            throw e; // If still failing after 3 retries, rethrow the exception
+                        }
+                        // Wait before retrying
+                        try {
+                            Thread.sleep(1000 * retryCount); // Wait for an increasing amount of time before retrying
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException(ie);
+                        }
+                    }
+                }
 
                 filePosition += partSize;
             }
 
-
             CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(getConfig().getString("bucket-name"), "World." + key + ".zip",
                     initResponse.getUploadId(), partETags);
 
-            s3.completeMultipartUpload(compRequest);//Handle exception
+            s3.completeMultipartUpload(compRequest);
             getLogger().info("File uploaded successfully");
         } catch (Exception e) {
             s3.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, "World." + key + ".zip", initResponse.getUploadId()));
