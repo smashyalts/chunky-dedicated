@@ -4,28 +4,32 @@ import java.io.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public class ZipDirectory {
-    public static void main(String args) throws IOException {
+    private static AtomicLong totalSize = new AtomicLong(0);
+    private static AtomicLong zippedSize = new AtomicLong(0);
+
+    public static void main(String args) {
         String sourceFile = args;
-        FileOutputStream fos = new FileOutputStream("world.zip");
-        ZipOutputStream zipOut = new ZipOutputStream(fos);
+        try (FileOutputStream fos = new FileOutputStream("world.zip");
+             ZipOutputStream zipOut = new ZipOutputStream(fos)) {
 
-        File fileToZip = new File(sourceFile);
+            File fileToZip = new File(sourceFile);
+            totalSize.set(getTotalSize(fileToZip));
 
-        ForkJoinPool pool = new ForkJoinPool();
-        pool.invoke(new ZipAction(fileToZip, fileToZip.getName(), zipOut));
+            ForkJoinPool pool = new ForkJoinPool();
+            pool.invoke(new ZipAction(fileToZip, fileToZip.getName(), zipOut));
 
-        zipOut.close();
-        fos.close();
+            pool.shutdown();
+            pool.awaitQuiescence(60, TimeUnit.SECONDS);
 
-        pool.shutdown(); // Initiates an orderly shutdown in which previously submitted tasks are executed, but no new tasks will be accepted
-        pool.awaitQuiescence(60, TimeUnit.SECONDS); // Wait for all tasks to complete for up to 60 seconds
-
-        // Suggest to the JVM that it's a good time to run the Garbage Collector
-        System.gc();
+            System.gc();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     static class ZipAction extends RecursiveAction {
@@ -58,9 +62,11 @@ public class ZipDirectory {
                 }
 
                 File[] children = fileToZip.listFiles();
-                for (File childFile : children) {
-                    ZipAction action = new ZipAction(childFile, fileName + childFile.getName(), zipOut);
-                    action.fork(); // Start the action asynchronously
+                if (children != null) {
+                    for (File childFile : children) {
+                        ZipAction action = new ZipAction(childFile, fileName + childFile.getName(), zipOut);
+                        action.fork();
+                    }
                 }
             } else {
                 synchronized (zipOut) {
@@ -71,6 +77,8 @@ public class ZipDirectory {
                         int length;
                         while ((length = fis.read(bytes)) >= 0) {
                             zipOut.write(bytes, 0, length);
+                            zippedSize.addAndGet(length);
+                            printProgress();
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -78,5 +86,22 @@ public class ZipDirectory {
                 }
             }
         }
+    }
+
+    private static long getTotalSize(File file) {
+        long size = 0;
+        if (file.isDirectory()) {
+            for (File child : file.listFiles()) {
+                size += getTotalSize(child);
+            }
+        } else {
+            size = file.length();
+        }
+        return size;
+    }
+
+    private static void printProgress() {
+        double progress = (double) zippedSize.get() / totalSize.get() * 100;
+        System.out.printf("Progress: %.2f%%\n", progress);
     }
 }

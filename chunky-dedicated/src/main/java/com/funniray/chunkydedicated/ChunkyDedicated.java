@@ -66,11 +66,7 @@ public final class ChunkyDedicated extends JavaPlugin {
                 return;
             }
             getLogger().info("All tasks finished, uploading files to r2 and closing server...");
-            try {
-                ZipDirectory.main("world");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            ZipDirectory.main("world");
             DiscordWebhook webhook = new DiscordWebhook(getConfig().getString("webhook"));
             webhook.setContent("https://maps.r2.game.smd.gg/"+ "World." + key + ".zip");
             webhook.setAvatarUrl("https://avatars.githubusercontent.com/u/108903815?s=400&u=80787b5c250845ab8ddbc4b9105c841714af3943&v=4");
