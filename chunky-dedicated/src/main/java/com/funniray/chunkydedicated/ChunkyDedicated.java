@@ -46,7 +46,7 @@ public final class ChunkyDedicated extends JavaPlugin {
             if (isFinished()) {
                 getLogger().info("No tasks were registered, server closing...");
                 Bukkit.getScheduler().runTaskLater(ChunkyDedicated.getPlugin(ChunkyDedicated.class), ()->{
-                    getServer().shutdown();}, 18000L);
+                    getServer().shutdown();}, 288000L);
 
 
             }
