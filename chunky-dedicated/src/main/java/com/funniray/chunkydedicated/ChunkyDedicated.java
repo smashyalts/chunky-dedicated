@@ -76,7 +76,7 @@ public final class ChunkyDedicated extends JavaPlugin {
             }
             multipartUploadWithS3Client("world.zip");
             Bukkit.getScheduler().runTaskLater(ChunkyDedicated.getPlugin(ChunkyDedicated.class), ()->{
-                getServer().shutdown();}, 18000L);
+                getServer().shutdown();}, 288000L);
 
         });
     }
@@ -124,7 +124,7 @@ public final class ChunkyDedicated extends JavaPlugin {
                         partETags.add(uploadResult.getPartETag());
                         break;
                     } catch (Exception e) {
-                        if (++retryCount > 3) { // Maximum of 3 retries
+                        if (++retryCount > 10) { // Maximum of 3 retries
                             throw e; // If still failing after 3 retries, rethrow the exception
                         }
                         // Wait before retrying
